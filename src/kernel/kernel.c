@@ -6,6 +6,112 @@
 #include <common/stdio.h>
 #include <common/stdlib.h>
 
+typedef struct Node {
+    int data;
+    struct Node *next;
+} Node;
+
+Node *create_node(int data) {
+    Node *new_node = (Node *)kmalloc(sizeof(Node)); // Use kmalloc for memory allocation
+    if (new_node == NULL) {
+        puts("Failed to allocate memory for new node\n");
+        return NULL; // Handle memory allocation failure
+    }
+    new_node->data = data;  // Store the integer data
+    new_node->next = NULL;  // Initialize the next pointer to NULL
+    return new_node;
+}
+
+Node *add_node(Node *head, int data) {
+    Node *new_node = create_node(data); // Create a new node
+    if (new_node == NULL) {
+        return head; // If memory allocation fails, return the unchanged head
+    }
+
+    if (head == NULL) { // If the list is empty, the new node becomes the head
+        return new_node;
+    } else {
+        Node *current = head;
+        while (current->next != NULL) { // Traverse to the last node
+            current = current->next;
+        }
+        current->next = new_node;
+    }
+    return head; // Return the updated head of the list
+}
+
+void display_list(Node *head) {
+    if (head == NULL) {
+        puts("The list is empty.\n");
+        return;
+    }
+
+    Node *current = head;
+    printf("LinkedList: ");
+    while (current != NULL) {
+        print_int(current->data); // Print the integer data
+        putc(' ');               // Space between numbers
+        current = current->next;
+    }
+    putc('\n'); // Newline after printing the list
+}
+
+void clear_list(Node **head) {
+    printf("clearing\n");
+    if (*head == NULL) {
+        printf("The list is already empty\n");
+        return;
+    }
+
+    Node *current = *head;
+    Node *next;
+
+    printf("looping\n");
+    while (current != NULL) {
+        printf("current node: %d, data: %d\n", (int)current, current->data);
+        next = current->next; // Store the next node
+        printf("next node: %d\n", (int)next);
+
+        kfree(current); // Free the current node
+        current = next; // Move to the next node
+
+        // Add explicit termination check
+        if (current == NULL) {
+            printf("Current is NULL; exiting loop.\n");
+            break;
+        } else {
+            printf("current updated to: %d\n", (int)current);
+        }
+    }
+
+    printf("loop done\n");
+    *head = NULL; // Set the head pointer to NULL
+    printf("head set to NULL\n");
+}
+
+
+void test_linkedlist() {
+    Node *head = NULL; // Initialize the LinkedList
+
+    // Add nodes with integer data
+    head = add_node(head, 10);
+    head = add_node(head, 20);
+    head = add_node(head, 30);
+
+    // Display the list
+    display_list(head);
+
+    // Clear the list
+    printf("Clearing the list...\n");
+	printf("Before clearing: %p\n", head);
+	clear_list(&head);
+	printf("After clearing: %p\n", head);
+
+    // Try to display the list again
+    display_list(head);
+}
+
+
 int custom_strcmp(const char *str1, const char *str2) {
     while (*str1 && *str2) {
         if (*str1 != *str2) {
@@ -144,6 +250,7 @@ void kernel_main(uint32_t r0, uint32_t r1, uint32_t atags)
 		    printf("Exiting CLI...\n");
 		    break; // Exit the loop
 		} else {
+			test_linkedlist();
 		    printf("Unknown command. Type 'help' for available commands.\n");
 		}
 
