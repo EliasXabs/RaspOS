@@ -31,6 +31,34 @@ void simplified_kfree(void* ptr) {
 
 }
 
+void printf(const char *format, ...) {
+    char *arg_list = (char *)&format + sizeof(format); // Pointer to the arguments
+    char *str_arg;     // Pointer for string arguments
+    int int_arg;       // Integer argument
+
+    // Iterate through the format string
+    while (*format) {
+        if (*format == '%' && *(format + 1)) { // Check for format specifier
+            format++; // Move to the specifier character
+            if (*format == 's') { // Handle %s (string)
+                str_arg = *(char **)arg_list; // Retrieve string argument
+                arg_list += sizeof(char *);  // Advance to the next argument
+                puts(str_arg);               // Print the string
+            } else if (*format == 'd') { // Handle %d (integer)
+                int_arg = *(int *)arg_list; // Retrieve integer argument
+                arg_list += sizeof(int);   // Advance to the next argument
+                puts(itoa(int_arg));
+            } else { // Unsupported specifier, just print as-is
+                putc('%');
+                putc(*format);
+            }
+        } else { // Normal character, print as-is
+            putc(*format);
+        }
+        format++; // Move to the next character
+    }
+}
+
 Node *create_node(int data) {
     Node *new_node = (Node *)simplified_kmalloc(sizeof(Node));
     if (new_node == NULL) {
@@ -129,33 +157,6 @@ int custom_atoi(const char *str) {
 }
 
 
-void printf(const char *format, ...) {
-    char *arg_list = (char *)&format + sizeof(format); // Pointer to the arguments
-    char *str_arg;     // Pointer for string arguments
-    int int_arg;       // Integer argument
-
-    // Iterate through the format string
-    while (*format) {
-        if (*format == '%' && *(format + 1)) { // Check for format specifier
-            format++; // Move to the specifier character
-            if (*format == 's') { // Handle %s (string)
-                str_arg = *(char **)arg_list; // Retrieve string argument
-                arg_list += sizeof(char *);  // Advance to the next argument
-                puts(str_arg);               // Print the string
-            } else if (*format == 'd') { // Handle %d (integer)
-                int_arg = *(int *)arg_list; // Retrieve integer argument
-                arg_list += sizeof(int);   // Advance to the next argument
-                puts(itoa(int_arg));        // Print the integer (using print_int from before)
-            } else { // Unsupported specifier, just print as-is
-                putc('%');
-                putc(*format);
-            }
-        } else { // Normal character, print as-is
-            putc(*format);
-        }
-        format++; // Move to the next character
-    }
-}
 
 int validate_int(const char *prompt) {
     char input_buf[128];
@@ -200,9 +201,6 @@ int validate_int(const char *prompt) {
 void kernel_main(uint32_t r0, uint32_t r1, uint32_t atags) {
     char buf[256];
     char command[32];
-    char args[224];
-    char arg1[128], arg2[128];
-    int num1, num2;
     Node *head = NULL; // Initialize LinkedList
 
     // Declare as unused
@@ -222,31 +220,19 @@ void kernel_main(uint32_t r0, uint32_t r1, uint32_t atags) {
         puts("> ");
         gets(buf, 256); // Read user input into buffer
 
-        // Clear the command and args buffers
+        // Clear the command buffer
         for (int i = 0; i < 32; i++) {
             command[i] = '\0';
         }
-        for (int i = 0; i < 224; i++) {
-            args[i] = '\0';
-        }
 
         // Parse the command and arguments manually
-        int i = 0, j = 0;
+        int i = 0;
         // Extract the command (up to the first space or end of string)
         while (buf[i] != ' ' && buf[i] != '\0') {
             command[i] = buf[i];
             i++;
         }
         command[i] = '\0'; // Null-terminate the command
-
-        // Skip the space and copy the rest into args
-        if (buf[i] == ' ') {
-            i++; // Move past the space
-        }
-        while (buf[i] != '\0') {
-            args[j++] = buf[i++];
-        }
-        args[j] = '\0'; // Null-terminate the arguments
 
         // Command handling
         if (custom_strcmp(command, "help") == 0) {
@@ -258,17 +244,17 @@ void kernel_main(uint32_t r0, uint32_t r1, uint32_t atags) {
             printf("clearlist     - Clear the content of the LinkedList\n");
             printf("exit          - Exit the kernel loop\n");
         } else if (custom_strcmp(command, "sum") == 0) {
-			// Prompt and validate integers
-			int num1 = validate_int("Enter first number: ");
-			int num2 = validate_int("Enter second number: ");
+            // Prompt and validate integers
+            int num1 = validate_int("Enter first number: ");
+            int num2 = validate_int("Enter second number: ");
 
-			printf("The sum is: %d\n", num1 + num2);
-		} else if (custom_strcmp(command, "addnode") == 0) {
-			// Prompt and validate integer for LinkedList
-			int value = validate_int("Enter an integer to add to the LinkedList: ");
-			head = add_node(head, value);
-			printf("Node with value %d added to the LinkedList.\n", value);
-		} else if (custom_strcmp(command, "displaylist") == 0) {
+            printf("The sum is: %d\n", num1 + num2);
+        } else if (custom_strcmp(command, "addnode") == 0) {
+            // Prompt and validate integer for LinkedList
+            int value = validate_int("Enter an integer to add to the LinkedList: ");
+            head = add_node(head, value);
+            printf("Node with value %d added to the LinkedList.\n", value);
+        } else if (custom_strcmp(command, "displaylist") == 0) {
             display_list(head);
         } else if (custom_strcmp(command, "clearlist") == 0) {
             clear_list(&head);
