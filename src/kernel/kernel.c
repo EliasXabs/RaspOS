@@ -11,14 +11,34 @@ typedef struct Node {
     struct Node *next;
 } Node;
 
+void* simple_heap = (void*)0x10000;
+size_t heap_size = 0x10000;
+
+void* simplified_kmalloc(uint32_t size) {
+    if (size > heap_size) {
+        puts("Out of memory\n");
+        return NULL;
+    }
+    void* allocated_memory = simple_heap;
+    simple_heap += size;
+    heap_size -= size;
+    return allocated_memory;
+}
+
+void simplified_kfree(void* ptr) {
+
+    (void)ptr;
+
+}
+
 Node *create_node(int data) {
-    Node *new_node = (Node *)kmalloc(sizeof(Node)); // Use kmalloc for memory allocation
+    Node *new_node = (Node *)simplified_kmalloc(sizeof(Node));
     if (new_node == NULL) {
         puts("Failed to allocate memory for new node\n");
-        return NULL; // Handle memory allocation failure
+        return NULL;
     }
-    new_node->data = data;  // Store the integer data
-    new_node->next = NULL;  // Initialize the next pointer to NULL
+    new_node->data = data;
+    new_node->next = NULL;
     return new_node;
 }
 
@@ -66,27 +86,15 @@ void clear_list(Node **head) {
     Node *current = *head;
     Node *next;
 
-    printf("looping\n");
     while (current != NULL) {
-        printf("current node: %d, data: %d\n", (int)current, current->data);
         next = current->next; // Store the next node
-        printf("next node: %d\n", (int)next);
 
-        kfree(current); // Free the current node
+        simplified_kfree(current); // Free the current node
         current = next; // Move to the next node
-
-        // Add explicit termination check
-        if (current == NULL) {
-            printf("Current is NULL; exiting loop.\n");
-            break;
-        } else {
-            printf("current updated to: %d\n", (int)current);
-        }
+        
     }
 
-    printf("loop done\n");
     *head = NULL; // Set the head pointer to NULL
-    printf("head set to NULL\n");
 }
 
 
@@ -103,9 +111,7 @@ void test_linkedlist() {
 
     // Clear the list
     printf("Clearing the list...\n");
-	printf("Before clearing: %p\n", head);
 	clear_list(&head);
-	printf("After clearing: %p\n", head);
 
     // Try to display the list again
     display_list(head);
@@ -185,12 +191,14 @@ void printf(const char *format, ...) {
 }
 
 
-void kernel_main(uint32_t r0, uint32_t r1, uint32_t atags)
-{
+void kernel_main(uint32_t r0, uint32_t r1, uint32_t atags) {
     char buf[256];
     char command[32];
     char args[224];
-    
+    char arg1[128], arg2[128];
+    int num1, num2;
+    Node *head = NULL; // Initialize LinkedList
+
     // Declare as unused
     (void) r0;
     (void) r1;
@@ -201,65 +209,82 @@ void kernel_main(uint32_t r0, uint32_t r1, uint32_t atags)
     puts("Initializing Memory Module\n");
     mem_init((atag_t *)atags);
 
-    puts("Hello, kernel World!\n");
+    // Welcome message
+    puts("CSC440 Project Fall 2024!\n");
 
     while (1) {
-		puts("> ");
-		gets(buf, 256); // Read user input into buffer
+        puts("> ");
+        gets(buf, 256); // Read user input into buffer
 
-		// Clear the command and args buffers
-		for (int i = 0; i < 32; i++) {
-		    command[i] = '\0';
-		}
-		for (int i = 0; i < 224; i++) {
-		    args[i] = '\0';
-		}
+        // Clear the command and args buffers
+        for (int i = 0; i < 32; i++) {
+            command[i] = '\0';
+        }
+        for (int i = 0; i < 224; i++) {
+            args[i] = '\0';
+        }
 
-		// Parse the command and arguments manually
-		int i = 0, j = 0;
-		// Extract the command (up to the first space or end of string)
-		while (buf[i] != ' ' && buf[i] != '\0') {
-		    command[i] = buf[i];
-		    i++;
-		}
-		command[i] = '\0'; // Null-terminate the command
+        // Parse the command and arguments manually
+        int i = 0, j = 0;
+        // Extract the command (up to the first space or end of string)
+        while (buf[i] != ' ' && buf[i] != '\0') {
+            command[i] = buf[i];
+            i++;
+        }
+        command[i] = '\0'; // Null-terminate the command
 
-		// Skip the space and copy the rest into args
-		if (buf[i] == ' ') {
-		    i++; // Move past the space
-		}
-		while (buf[i] != '\0') {
-		    args[j++] = buf[i++];
-		}
-		args[j] = '\0'; // Null-terminate the arguments
+        // Skip the space and copy the rest into args
+        if (buf[i] == ' ') {
+            i++; // Move past the space
+        }
+        while (buf[i] != '\0') {
+            args[j++] = buf[i++];
+        }
+        args[j] = '\0'; // Null-terminate the arguments
 
-		// Compare the command using custom_strcmp
-		if (custom_strcmp(command, "help") == 0) {
-		    printf("Available commands:\n");
-		    printf("help - Show help message\n");
-		    printf("echo [message] - Print a message\n");
-		    printf("square [number] - Print the square of a number\n");
-		    printf("exit - Exit the CLI\n");
-		} else if (custom_strcmp(command, "echo") == 0) {
-		    printf("%s\n", args); // Print the argument
-		} else if (custom_strcmp(command, "square") == 0) {
-		    int number = custom_atoi(args); // Convert the argument to an integer
-		    int square = number * number;
-		    printf("The square is: %d\n", square); // Print the result
-		} else if (custom_strcmp(command, "exit") == 0) {
-		    printf("Exiting CLI...\n");
-		    break; // Exit the loop
-		} else {
-			test_linkedlist();
-		    printf("Unknown command. Type 'help' for available commands.\n");
-		}
+        // Command handling
+        if (custom_strcmp(command, "help") == 0) {
+            printf("Available commands:\n");
+            printf("help          - Show this help message\n");
+            printf("sum           - Calculate the sum of two integers\n");
+            printf("addnode       - Add an integer to the LinkedList\n");
+            printf("displaylist   - Display the content of the LinkedList\n");
+            printf("clearlist     - Clear the content of the LinkedList\n");
+            printf("exit          - Exit the kernel loop\n");
+        } else if (custom_strcmp(command, "sum") == 0) {
+            puts("Enter first number: ");
+            gets(arg1, 128);
+            num1 = custom_atoi(arg1);
 
-		// Clear the input buffer
-		for (int i = 0; i < 256; i++) {
-		    buf[i] = '\0';
-		}
+            puts("Enter second number: ");
+            gets(arg2, 128);
+            num2 = custom_atoi(arg2);
 
-		putc('\n'); // Print a newline after processing the command
-	}
+            printf("The sum is: %d\n", num1 + num2);
+        } else if (custom_strcmp(command, "addnode") == 0) {
+            puts("Enter an integer to add to the LinkedList: ");
+            gets(arg1, 128);
+            num1 = custom_atoi(arg1);
 
+            head = add_node(head, num1);
+            puts("Node added to the LinkedList.\n");
+        } else if (custom_strcmp(command, "displaylist") == 0) {
+            display_list(head);
+        } else if (custom_strcmp(command, "clearlist") == 0) {
+            clear_list(&head);
+        } else if (custom_strcmp(command, "exit") == 0) {
+            puts("Exiting kernel loop...\n");
+            break;
+        } else {
+            printf("Unknown command. Type 'help' for available commands.\n");
+        }
+
+        // Clear the input buffer
+        for (int i = 0; i < 256; i++) {
+            buf[i] = '\0';
+        }
+
+        putc('\n'); // Print a newline after processing the command
+    }
 }
+
