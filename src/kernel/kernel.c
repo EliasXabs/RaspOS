@@ -157,6 +157,45 @@ void printf(const char *format, ...) {
     }
 }
 
+int validate_int(const char *prompt) {
+    char input_buf[128];
+    int valid = 0;
+    int result = 0;
+
+    while (!valid) {
+        puts(prompt);
+        gets(input_buf, sizeof(input_buf));
+
+        // Check if the input is empty or contains only whitespace
+        int i = 0;
+        while (input_buf[i] == ' ' || input_buf[i] == '\t') { // Skip leading spaces or tabs
+            i++;
+        }
+        if (input_buf[i] == '\0') { // If after skipping spaces, it's still empty
+            puts("Input cannot be empty or whitespace. Please enter a valid integer.\n");
+            continue; // Prompt the user again
+        }
+
+        // Check if the input is a valid integer
+        valid = 1;
+        if (input_buf[i] == '-') i++; // Allow negative numbers
+        for (; input_buf[i] != '\0'; i++) {
+            if (input_buf[i] < '0' || input_buf[i] > '9') {
+                valid = 0;
+                puts("Invalid input. Please enter a valid integer.\n");
+                break;
+            }
+        }
+
+        if (valid) {
+            result = custom_atoi(input_buf);
+        }
+    }
+
+    return result;
+}
+
+
 
 void kernel_main(uint32_t r0, uint32_t r1, uint32_t atags) {
     char buf[256];
@@ -219,23 +258,17 @@ void kernel_main(uint32_t r0, uint32_t r1, uint32_t atags) {
             printf("clearlist     - Clear the content of the LinkedList\n");
             printf("exit          - Exit the kernel loop\n");
         } else if (custom_strcmp(command, "sum") == 0) {
-            puts("Enter first number: ");
-            gets(arg1, 128);
-            num1 = custom_atoi(arg1);
+			// Prompt and validate integers
+			int num1 = validate_int("Enter first number: ");
+			int num2 = validate_int("Enter second number: ");
 
-            puts("Enter second number: ");
-            gets(arg2, 128);
-            num2 = custom_atoi(arg2);
-
-            printf("The sum is: %d\n", num1 + num2);
-        } else if (custom_strcmp(command, "addnode") == 0) {
-            puts("Enter an integer to add to the LinkedList: ");
-            gets(arg1, 128);
-            num1 = custom_atoi(arg1);
-
-            head = add_node(head, num1);
-            puts("Node added to the LinkedList.\n");
-        } else if (custom_strcmp(command, "displaylist") == 0) {
+			printf("The sum is: %d\n", num1 + num2);
+		} else if (custom_strcmp(command, "addnode") == 0) {
+			// Prompt and validate integer for LinkedList
+			int value = validate_int("Enter an integer to add to the LinkedList: ");
+			head = add_node(head, value);
+			printf("Node with value %d added to the LinkedList.\n", value);
+		} else if (custom_strcmp(command, "displaylist") == 0) {
             display_list(head);
         } else if (custom_strcmp(command, "clearlist") == 0) {
             clear_list(&head);
