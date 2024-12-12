@@ -69,8 +69,8 @@ void display_list(Node *head) {
     Node *current = head;
     printf("LinkedList: ");
     while (current != NULL) {
-        print_int(current->data); // Print the integer data
-        putc(' ');               // Space between numbers
+        puts(itoa(current->data)); // Convert integer to string and print it
+        putc(' ');                // Space between numbers
         current = current->next;
     }
     putc('\n'); // Newline after printing the list
@@ -96,27 +96,6 @@ void clear_list(Node **head) {
 
     *head = NULL; // Set the head pointer to NULL
 }
-
-
-void test_linkedlist() {
-    Node *head = NULL; // Initialize the LinkedList
-
-    // Add nodes with integer data
-    head = add_node(head, 10);
-    head = add_node(head, 20);
-    head = add_node(head, 30);
-
-    // Display the list
-    display_list(head);
-
-    // Clear the list
-    printf("Clearing the list...\n");
-	clear_list(&head);
-
-    // Try to display the list again
-    display_list(head);
-}
-
 
 int custom_strcmp(const char *str1, const char *str2) {
     while (*str1 && *str2) {
@@ -149,18 +128,6 @@ int custom_atoi(const char *str) {
     return result * sign; // Apply the sign to the result
 }
 
-void print_int(int num) {
-	if (num < 0){
-		putc('-');
-		num = -num;
-	}
-	
-	if (num / 10 ) {
-		print_int(num/10);
-	}
-	
-	putc((num%10) + '0');
-}
 
 void printf(const char *format, ...) {
     char *arg_list = (char *)&format + sizeof(format); // Pointer to the arguments
@@ -178,7 +145,7 @@ void printf(const char *format, ...) {
             } else if (*format == 'd') { // Handle %d (integer)
                 int_arg = *(int *)arg_list; // Retrieve integer argument
                 arg_list += sizeof(int);   // Advance to the next argument
-                print_int(int_arg);        // Print the integer (using print_int from before)
+                puts(itoa(int_arg));        // Print the integer (using print_int from before)
             } else { // Unsupported specifier, just print as-is
                 putc('%');
                 putc(*format);
